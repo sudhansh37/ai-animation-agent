@@ -264,12 +264,16 @@ def build_storyboard(analysis: Dict, narration: Dict, options: Optional[dict] = 
             camera_move = "push_in"
 
         scene_chars = []
-        for (x, depth, facing), char in zip(placements, cast):
+        # with three actors in a 9:16 frame the outer two are drawn smaller so
+        # shoulders never overlap
+        crowd_scale = 0.80 if len(cast) >= 3 else 1.0
+        for pos_index, ((x, depth, facing), char) in enumerate(zip(placements, cast)):
             scene_chars.append({
                 "id": char["id"],
                 "x": round(x, 3),
                 "depth": depth,
                 "facing": facing,
+                "scale": crowd_scale if pos_index != 1 or len(cast) < 3 else 1.0,
                 "action": action if char is cast[0] else ("stand" if action in ("talk",) else action),
                 "expression": emotion if char is cast[0] else "neutral",
                 "previous_action": previous_action,
