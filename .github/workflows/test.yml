@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Ensure ffmpeg
+        run: |
+          command -v ffmpeg >/dev/null 2>&1 || sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version 2>/dev/null | sed -n '1p'
+
+      - name: Install deps
+        run: |
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet -r requirements.txt
+
+      - name: Run pipeline tests
+        run: python -m tests.test_pipeline
+
+      - name: Rule-based plan smoke test
+        run: |
+          python -m app.main --project projects/pink_paint --no-ai --no-tts --plan-only
