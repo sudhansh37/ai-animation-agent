@@ -100,7 +100,7 @@ def synthesize_piper(text: str, out_path: str, speed: float = 1.0) -> TTSResult:
 
 
 def synthesize_gemini(text: str, out_path: str, voice: str = "Kore",
-                      style: str = "Speak warmly and clearly, like a documentary narrator.") -> TTSResult:
+                      style: str = "") -> TTSResult:
     key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if not key:
         raise TTSUnavailable("GEMINI_API_KEY is not set")
@@ -108,7 +108,7 @@ def synthesize_gemini(text: str, out_path: str, voice: str = "Kore",
         raise TTSUnavailable("the 'requests' package is not installed")
 
     body = {
-        "contents": [{"role": "user", "parts": [{"text": f"{style}\n\nNarration:\n{text.strip()}"}]}],
+        "contents": [{"role": "user", "parts": [{"text": (f"{style}\n\n" if style else "") + text.strip()}]}],
         "generationConfig": {
             "responseModalities": ["AUDIO"],
             "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}},
@@ -170,6 +170,101 @@ def synthesize_espeak(text: str, out_path: str, speed: float = 1.0, voice: str =
     if proc.returncode != 0 or not os.path.exists(out_path):
         raise TTSUnavailable(f"espeak failed: {proc.stderr.decode('utf8', 'ignore')[:300]}")
     return TTSResult(out_path, _wav_duration(out_path), "espeak", text)
+
+
+def trim_silence(path: str, threshold_db: float = -42.0, pad: float = 0.12) -> float:
+    """Trim leading/trailing silence from a narration clip and return its new length.
+
+    TTS models often pad a short line with seconds of silence; without this the
+    scene timing (and therefore the whole video) stretches for no reason.
+    """
+    import numpy as _np
+    try:
+        with wave.open(path, "rb") as w:
+            ch, sw, sr, n = w.getnchannels(), w.getsampwidth(), w.getframerate(), w.getnframes()
+            raw = w.readframes(n)
+        if sw != 2:
+            return _wav_duration(path)
+        data = _np.frombuffer(raw, dtype="<i2").astype(_np.float32) / 32768.0
+        if ch > 1:
+            data = data.reshape(-1, ch).mean(axis=1)
+        if data.size == 0:
+            return 0.0
+        thresh = 10 ** (threshold_db / 20.0)
+        loud = _np.abs(data) > thresh
+        if not loud.any():
+            return _wav_duration(path)
+        first = int(_np.argmax(loud))
+        last = int(len(data) - _np.argmax(loud[::-1]))
+        pad_n = int(pad * sr)
+        first = max(0, first - pad_n)
+        last = min(len(data), last + pad_n)
+        trimmed = data[first:last]
+        if trimmed.size < sr * 0.15:
+            return _wav_duration(path)
+        ints = (_np.clip(trimmed, -1, 1) * 32767).astype("<i2")
+        with wave.open(path, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(ints.tobytes())
+        return len(trimmed) / float(sr)
+    except Exception:
+        return _wav_duration(path)
+
+
+def compress_pauses(path: str, max_gap: float = 0.24, keep: float = 0.10) -> float:
+    """Shorten silences inside a narration clip.
+
+    Gemini TTS inserts dramatic pauses between phrases; left alone they stretch a
+    20-second short into 60. This keeps the words and tightens the gaps.
+    """
+    import numpy as _np
+    try:
+        with wave.open(path, "rb") as w:
+            ch, sw, sr = w.getnchannels(), w.getsampwidth(), w.getframerate()
+            raw = w.readframes(w.getnframes())
+        if sw != 2:
+            return _wav_duration(path)
+        data = _np.frombuffer(raw, dtype="<i2").astype(_np.float32) / 32768.0
+        if ch > 1:
+            data = data.reshape(-1, ch).mean(axis=1)
+        block = max(1, int(0.02 * sr))
+        thresh = 10 ** (-45.0 / 20.0)
+        out_parts = []
+        i = 0
+        n = len(data)
+        silent_run = 0
+        keep_n = int(keep * sr)
+        max_n = int(max_gap * sr)
+        while i < n:
+            chunk = data[i:i + block]
+            loud = float(_np.abs(chunk).max()) > thresh
+            if loud:
+                silent_run = 0
+                out_parts.append(chunk)
+            else:
+                silent_run += len(chunk)
+                if silent_run <= max_n:
+                    out_parts.append(chunk)
+                elif silent_run <= max_n + block:
+                    # first silent block past the limit: emit only the kept tail
+                    out_parts.append(_np.zeros(keep_n, dtype=_np.float32))
+            i += block
+        if not out_parts:
+            return _wav_duration(path)
+        squeezed = _np.concatenate(out_parts)
+        if squeezed.size < sr * 0.1:
+            return _wav_duration(path)
+        ints = (_np.clip(squeezed, -1, 1) * 32767).astype("<i2")
+        with wave.open(path, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(ints.tobytes())
+        return len(squeezed) / float(sr)
+    except Exception:
+        return _wav_duration(path)
 
 
 INSTRUCTIONS = """\
