@@ -136,8 +136,12 @@ def build_audio(project: Project, board: Dict, args) -> Dict:
             try:
                 result = tts.synthesize(scene["narration"], out, backend=args.tts,
                                         voice=args.voice, speed=args.voice_speed)
+                raw_len = result.duration
+                result.duration = tts.trim_silence(out)      # TTS pads silence; trim it
+                result.duration = tts.compress_pauses(out)   # and squeeze long gaps
                 narration_files[scene["id"]] = result.path
-                log(f"  {scene['id']}: {result.duration:.2f}s via {result.backend}")
+                log(f"  {scene['id']}: {result.duration:.2f}s via {result.backend}"
+                    + (f" (trimmed from {raw_len:.2f}s)" if raw_len - result.duration > 0.2 else ""))
             except tts.TTSUnavailable as exc:
                 log(f"  {scene['id']}: TTS failed -> {exc}")
                 if args.require_tts:
@@ -277,6 +281,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--clean", action="store_true", help="delete intermediates before starting")
     p.add_argument("--style", default=None, help="path to a style/character override JSON")
     p.add_argument("--plan-only", action="store_true", help="stop after the storyboard")
+    p.add_argument("--storyboard", default=None,
+                   help="use this storyboard.json as-is (skips analysis and planning) — "
+                        "the way to clone a reference edit")
     return p
 
 
@@ -295,8 +302,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         log(f"cleaned: {', '.join(removed) if removed else 'nothing'}")
 
     log(f"project: {project.root}")
-    text = prepare_story(project, args.story, args.story_file)
-    board = analyse_and_plan(project, text, args)
+
+    if args.storyboard:
+        with open(args.storyboard, "r", encoding="utf-8") as f:
+            board = json.load(f)
+        # never overwrite the source shot list — retimed values go to a working copy
+        project.write_json("storyboard.used.json", board)
+        project.write_text("story.txt", project.read_text("story.txt", "") or board.get("title", ""))
+        log(f"storyboard: {args.storyboard} ({len(board['scenes'])} scenes, "
+            f"{board['duration']:.2f}s) — analysis and planning skipped")
+        print(sb.summarise(board), flush=True)
+    else:
+        text = prepare_story(project, args.story, args.story_file)
+        board = analyse_and_plan(project, text, args)
 
     if args.plan_only:
         log("--plan-only: stopping after the storyboard")
