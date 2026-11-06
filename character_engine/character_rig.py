@@ -140,6 +140,8 @@ class CharacterRig:
     # ------------------------------------------------------------------ #
     def draw(self, img: Image.Image, ground: Point, height_px: float, state: dict) -> Dict[str, Point]:
         """Draw the character and return the world-space joint map (for objects)."""
+        if (self.spec.get("bodyStyle") or "").lower() == "stick":
+            return self._draw_stick(img, ground, height_px, state)
         pose = state.get("pose") or {}
         facing = 1 if state.get("facing", 1) >= 0 else -1
         H = height_px * self.height
@@ -207,6 +209,115 @@ class CharacterRig:
         self._head(img, draw, head, r, state, head_turn, facing, ink_w)
 
         # expose hand anchors for object attachment
+        world["hand_l_tip"] = world["hand_l"]
+        world["hand_r_tip"] = world["hand_r"]
+        world["head_top"] = (head[0], head[1] - r)
+        return world
+
+    # ------------------------------------------------------------------ #
+    def _draw_stick(self, img: Image.Image, ground: Point, height_px: float,
+                    state: dict) -> Dict[str, Point]:
+        """Stick-figure body: oversized head, thin black limbs, slim torso.
+
+        This is the look of the reference short: a big cream head with heavy
+        brows on a nearly weightless body.
+        """
+        pose = state.get("pose") or {}
+        facing = 1 if state.get("facing", 1) >= 0 else -1
+        spec = self.spec
+        H = height_px * self.height
+        ox, oy = ground
+
+        joints = self.skeleton(pose)
+        head_turn = float(joints.pop("head_turn")[0])  # type: ignore[index]
+
+        def P(p: Point) -> Point:
+            return (ox + p[0] * H * facing, oy - p[1] * H)
+
+        world = {k: P(v) for k, v in joints.items()}  # type: ignore[arg-type]
+        draw = ImageDraw.Draw(img, "RGBA")
+
+        ink = spec.get("ink", "#1b1b22")
+        limb = H * float(spec.get("limb", 0.019))
+        ink_w = max(1.0, limb * 0.55)
+        skin = spec["skin"]
+        outfit = spec["outfit"]
+        accent = spec.get("accent") or "#8a5a2b"
+        torso_w = H * float(spec.get("torso", 0.062))
+
+        soft_shadow(img, (ox, oy), H * 0.14, H * 0.028, alpha=90, blur=H * 0.018)
+        draw = ImageDraw.Draw(img, "RGBA")
+
+        # back limbs
+        capsule(draw, world["shoulder_l"], world["elbow_l"], limb, ink, None, 0)
+        capsule(draw, world["elbow_l"], world["hand_l"], limb * 0.9, ink, None, 0)
+        capsule(draw, world["hip_l"], world["knee_l"], limb, ink, None, 0)
+        capsule(draw, world["knee_l"], world["ankle_l"], limb * 0.92, ink, None, 0)
+        self._foot(draw, world["ankle_l"], H, ink, 0, facing)
+
+        # torso
+        hip, chest = world["hip"], world["chest"]
+        capsule(draw, hip, chest, torso_w, outfit, ink, ink_w)
+        # tie / badge
+        if spec.get("tie", True):
+            neck = world["neck"]
+            tie_top = (neck[0], neck[1] + (chest[1] - neck[1]) * 0.05)
+            tie_mid = (chest[0], chest[1] + (hip[1] - chest[1]) * 0.55)
+            polygon(draw, [(tie_top[0] - torso_w * 0.30, tie_top[1]),
+                           (tie_top[0] + torso_w * 0.30, tie_top[1]),
+                           (tie_mid[0] + torso_w * 0.22, tie_mid[1]),
+                           (tie_mid[0], tie_mid[1] + torso_w * 0.55),
+                           (tie_mid[0] - torso_w * 0.22, tie_mid[1])],
+                    accent, ink, ink_w * 0.6)
+        if spec.get("badge"):
+            bx = chest[0] + torso_w * 0.55 * facing
+            by = chest[1] + (hip[1] - chest[1]) * 0.30
+            polygon(draw, [(bx, by - H * 0.016), (bx + H * 0.011, by - H * 0.005),
+                           (bx + H * 0.007, by + H * 0.011), (bx - H * 0.007, by + H * 0.011),
+                           (bx - H * 0.011, by - H * 0.005)], "#f2c14b", ink, ink_w * 0.5)
+
+        # front limbs
+        capsule(draw, world["hip_r"], world["knee_r"], limb, ink, None, 0)
+        capsule(draw, world["knee_r"], world["ankle_r"], limb * 0.92, ink, None, 0)
+        self._foot(draw, world["ankle_r"], H, ink, 0, facing)
+        capsule(draw, world["shoulder_r"], world["elbow_r"], limb, ink, None, 0)
+        capsule(draw, world["elbow_r"], world["hand_r"], limb * 0.9, ink, None, 0)
+        ellipse(draw, *world["hand_r"], limb * 1.25, limb * 1.25, ink, None, 0)
+
+        # head (much bigger than the default rig)
+        head = world["head"]
+        scale = float(spec.get("head_scale", 1.55))
+        r = HEAD_R * H * scale
+        rx, ry = r * 0.92, r * 1.02
+        hx, hy = head
+        neck = world["neck"]
+        capsule(draw, chest, neck, torso_w * 0.45, skin, ink, ink_w * 0.8)
+        ellipse(draw, hx, hy, rx, ry, skin, ink, max(1.5, ink_w * 1.5))
+
+        # hair / cap
+        hair = spec["hair"]
+        style = spec.get("hairStyle", "short")
+        if style == "cap":
+            draw.chord([hx - rx * 1.04, hy - ry * 1.12, hx + rx * 1.04, hy + ry * 0.18],
+                       180, 360, fill=spec.get("accent", "#22304f"), outline=ink, width=int(max(2, ink_w * 1.6)))
+            polygon(draw, [(hx + facing * rx * 0.1, hy - ry * 0.55),
+                           (hx + facing * rx * 1.35, hy - ry * 0.42),
+                           (hx + facing * rx * 1.30, hy - ry * 0.28),
+                           (hx + facing * rx * 0.1, hy - ry * 0.34)],
+                    spec.get("accent", "#22304f"), ink, max(1.5, ink_w))
+        elif style != "bald":
+            draw.chord([hx - rx * 1.02, hy - ry * 1.10, hx + rx * 1.02, hy + ry * 0.05],
+                       180, 360, fill=hair, outline=ink, width=int(max(2, ink_w * 1.4)))
+            # a small tuft, like the reference scientist
+            polygon(draw, [(hx - rx * 0.1, hy - ry * 1.02), (hx + rx * 0.35, hy - ry * 1.22),
+                           (hx + rx * 0.30, hy - ry * 0.92)], hair, ink, max(1.2, ink_w * 0.8))
+
+        draw_face(draw, hx + facing * rx * 0.05, hy + ry * 0.06, r * 0.86, skin,
+                  expression=state.get("expression", "neutral"),
+                  mouth_open=float(state.get("mouth", 0.0)) * 0.55,
+                  blink=float(state.get("blink", 0.0)),
+                  facing=facing, head_turn=head_turn, ink=ink, line=max(1.6, ink_w * 1.5))
+
         world["hand_l_tip"] = world["hand_l"]
         world["hand_r_tip"] = world["hand_r"]
         world["head_top"] = (head[0], head[1] - r)
