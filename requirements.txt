@@ -1,0 +1,20 @@
+# ---------------------------------------------------------------------------
+# ai-animation-agent — CPU only. No CUDA, no GPU, no cloud rendering.
+# ---------------------------------------------------------------------------
+numpy>=1.26,<3
+Pillow>=10.0
+
+# Optional: SVG-based background/object drawing. The renderer falls back to
+# pure Pillow vector drawing when these are missing.
+cairosvg>=2.7 ; python_version >= "3.9"
+
+# Optional: only needed if you use the OpenCV accelerated background effects.
+# The pipeline never requires it.
+# opencv-python-headless>=4.9
+
+# Optional: only needed for --engine moviepy export. FFmpeg is the default.
+# moviepy>=1.0.3
+
+# Optional: offline neural TTS. `pip install piper-tts` + a voice model.
+# The pipeline uses Piper when present, otherwise Gemini TTS, otherwise espeak-ng.
+# piper-tts>=1.2.0
