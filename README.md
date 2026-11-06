@@ -127,6 +127,22 @@ python -m app.main --project projects/pink_paint --clean      # wipe intermediat
 Useful flags: `--voice`, `--voice-speed`, `--tts {auto,piper,gemini,espeak}`,
 `--require-tts`, `--crf`, `--preset`, `--world-scale`, `--music-db`, `--sfx-db`.
 
+### Cloning a reference video
+
+`--storyboard` renders a hand-written shot list and skips analysis/planning — that
+is how you match an existing edit:
+
+```bash
+python -m app.main --project projects/pink_cell \
+    --storyboard projects/pink_cell/storyboard.json
+```
+
+`projects/pink_cell/` is a worked example: a 20-second clone of a stick-figure
+prison short, with the shot list timed to the reference's cuts, a `caption` field
+per scene (short keyword captions, like the reference), and the `stick` body style
+(`"bodyStyle": "stick"` on a character spec gives the oversized head, thin limbs
+and slim torso).
+
 ### Desktop interface
 
 ```bash
