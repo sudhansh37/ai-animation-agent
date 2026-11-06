@@ -1,0 +1,100 @@
+{
+  "title": "A scientist discovers a pink paint that temporarily calms aggressive p",
+  "summary": "A scientist discovers a pink paint that temporarily calms aggressive prisoners. He tests it inside a prison.",
+  "characters": [
+    {
+      "id": "prisoner",
+      "name": "Prisoner",
+      "role": "protagonist",
+      "description": "The prisoner in the story."
+    },
+    {
+      "id": "scientist",
+      "name": "Scientist",
+      "role": "support",
+      "description": "The scientist in the story."
+    },
+    {
+      "id": "guard",
+      "name": "Guard",
+      "role": "support",
+      "description": "The guard in the story."
+    }
+  ],
+  "locations": [
+    {
+      "kind": "lab",
+      "name": "Lab"
+    },
+    {
+      "kind": "prison_cell",
+      "name": "Prison Cell"
+    },
+    {
+      "kind": "wall",
+      "name": "Wall"
+    }
+  ],
+  "objects": [
+    "paint_can"
+  ],
+  "beats": [
+    {
+      "index": 0,
+      "text": "A scientist discovers a pink paint that temporarily calms aggressive prisoners.",
+      "action": "talk",
+      "emotion": "happy",
+      "location": "lab",
+      "characters": [
+        "prisoner",
+        "scientist"
+      ],
+      "objects": []
+    },
+    {
+      "index": 1,
+      "text": "He tests it inside a prison.",
+      "action": "talk",
+      "emotion": "neutral",
+      "location": "prison_cell",
+      "characters": [
+        "prisoner"
+      ],
+      "objects": []
+    },
+    {
+      "index": 2,
+      "text": "A guard paints the walls pink.",
+      "action": "point",
+      "emotion": "neutral",
+      "location": "wall",
+      "characters": [
+        "guard"
+      ],
+      "objects": []
+    },
+    {
+      "index": 3,
+      "text": "The prisoners gradually become calm.",
+      "action": "stand",
+      "emotion": "happy",
+      "location": "prison_cell",
+      "characters": [
+        "prisoner"
+      ],
+      "objects": []
+    },
+    {
+      "index": 4,
+      "text": "However, after prolonged exposure, the effect reverses and the prisoners become aggressive again.",
+      "action": "stand",
+      "emotion": "angry",
+      "location": "prison_cell",
+      "characters": [
+        "prisoner"
+      ],
+      "objects": []
+    }
+  ],
+  "source": "rule-based"
+}
