@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw
 
 from render_engine.draw_utils import font, wrap_text
 
-SAFE_BOTTOM = 0.905    # keep captions above the platform UI
+SAFE_BOTTOM = 0.885    # keep captions above the platform UI
 MAX_WIDTH = 0.86       # fraction of frame width
 
 
@@ -32,7 +32,7 @@ def draw_caption(img: Image.Image, text: str, highlight_word: Optional[str] = No
     if not text:
         return
     w, h = img.size
-    size = max(26, int(w * 0.047))
+    size = max(28, int(w * 0.056))
     fnt = font(size, bold=True)
     lines = wrap_text(text, fnt, int(w * MAX_WIDTH))
     if not lines:
@@ -84,7 +84,7 @@ def cues_from_scenes(scenes: Sequence[dict]) -> List[dict]:
     """One caption per scene, split into <=12-word chunks when the line is long."""
     cues: List[dict] = []
     for scene in scenes:
-        text = (scene.get("narration") or "").strip()
+        text = (scene.get("caption") or scene.get("narration") or "").strip()
         if not text:
             continue
         start = float(scene.get("start", 0.0))
