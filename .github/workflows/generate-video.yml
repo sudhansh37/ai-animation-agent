@@ -28,6 +28,11 @@ on:
         type: boolean
         required: false
         default: false
+      storyboard:
+        description: "Path to a hand-written storyboard.json (clone mode; skips planning)"
+        type: string
+        required: false
+        default: ""
       no_ai:
         description: "Rule-based only (no Gemini calls)"
         type: boolean
@@ -96,6 +101,19 @@ jobs:
         continue-on-error: true
         run: sudo apt-get install -y -qq espeak-ng || true
 
+      - name: Offline neural TTS (Piper) + voice
+        continue-on-error: true
+        run: |
+          python -m pip install --quiet piper-tts || true
+          mkdir -p assets/voices
+          BASE=https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium
+          curl -sL --retry 2 -o assets/voices/en_US-lessac-medium.onnx "$BASE/en_US-lessac-medium.onnx" || true
+          curl -sL --retry 2 -o assets/voices/en_US-lessac-medium.onnx.json "$BASE/en_US-lessac-medium.onnx.json" || true
+          if [ -s assets/voices/en_US-lessac-medium.onnx ]; then
+            echo "PIPER_MODEL=$PWD/assets/voices/en_US-lessac-medium.onnx" >> "$GITHUB_ENV"
+            echo "piper voice ready"
+          fi
+
       - name: Install Python deps
         run: |
           python -m pip install --quiet --upgrade pip
@@ -119,6 +137,7 @@ jobs:
         run: |
           set -o pipefail
           ARGS="--project projects/$PROJECT --out output/${PROJECT}.mp4 --voice $VOICE"
+          if [ -n "${{ inputs.storyboard }}" ]; then ARGS="$ARGS --storyboard ${{ inputs.storyboard }}"; fi
           if [ "${{ inputs.preview }}" = "true" ]; then ARGS="$ARGS --preview"; fi
           if [ "${{ inputs.no_ai }}" = "true" ]; then ARGS="$ARGS --no-ai"; fi
           python -m app.main $ARGS 2>&1 | tee work.log
