@@ -1,0 +1,12 @@
+{
+  "path": "output/pink_paint.mp4",
+  "size_bytes": 5200732,
+  "duration": 21.76,
+  "video_codec": "h264",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30.0,
+  "audio_codec": "aac",
+  "has_audio": true,
+  "problems": []
+}
