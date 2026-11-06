@@ -21,6 +21,8 @@ from render_engine.draw_utils import (ellipse, hex_to_rgb, mix, polygon, radial_
 KINDS = [
     "lab", "prison_cell", "prison_corridor", "prison_yard", "office",
     "city", "forest", "plain", "night_sky", "room", "wall",
+    # added for the reference-style clone
+    "cell", "paint_shop", "corridor", "canteen",
 ]
 
 PALETTES: Dict[str, List[str]] = {
@@ -35,7 +37,43 @@ PALETTES: Dict[str, List[str]] = {
     "night_sky": ["#0e1630", "#243a68", "#5a7ab0"],
     "room": ["#3a3242", "#5a5060", "#b8a8b0"],
     "wall": ["#333a44", "#4a525e", "#9aa4b0"],
+    "cell": ["#20404f", "#2f5d70", "#8fb8c8"],
+    "paint_shop": ["#dfe4e0", "#b9c4c0", "#6d7a76"],
+    "corridor": ["#1d3442", "#2a4c5c", "#9ec4d2"],
+    "canteen": ["#22323f", "#33566a", "#a8c4d2"],
 }
+
+
+def _bricks(draw: ImageDraw.ImageDraw, w: int, h: int, top: float, bottom: float,
+            colour: str, mortar: str, bw: float = 0.075, bh: float = 0.030) -> None:
+    """Running-bond brick wall — the reference rooms are all tiled like this."""
+    draw.rectangle([0, top, w, bottom], fill=colour)
+    rows = max(1, int((bottom - top) / (h * bh)))
+    for r in range(rows + 1):
+        y = top + r * h * bh
+        offset = (w * bw * 0.5) if r % 2 else 0
+        draw.line([(0, y), (w, y)], fill=mortar, width=max(1, int(h * 0.0035)))
+        x = -offset
+        while x < w:
+            draw.line([(x, y), (x, y + h * bh)], fill=mortar, width=max(1, int(h * 0.0035)))
+            x += w * bw
+
+
+def _ceiling_light(img: Image.Image, x: float, y: float, w: float, h: float) -> None:
+    d = ImageDraw.Draw(img, "RGBA")
+    rounded_rect(d, [x - w * 0.5, y, x + w * 0.5, y + h * 0.10], w * 0.03, "#e8eef2", "#8fa4b0", max(1, w * 0.012))
+    for i in range(3):
+        d.rectangle([x - w * 0.42, y + h * 0.02 + i * h * 0.022, x + w * 0.42, y + h * 0.036 + i * h * 0.022],
+                    fill=(255, 252, 235, 235))
+
+
+def _window(img: Image.Image, x: float, y: float, w: float, h: float, bars: int = 4) -> None:
+    d = ImageDraw.Draw(img, "RGBA")
+    rounded_rect(d, [x - w / 2, y, x + w / 2, y + h], w * 0.02, "#cfe4ef", "#6f8b9a", max(2, w * 0.02))
+    for i in range(1, bars):
+        bx = x - w / 2 + i * w / bars
+        d.line([(bx, y), (bx, y + h)], fill="#8fa4b0", width=max(2, int(w * 0.018)))
+    d.line([(x - w / 2, y + h * 0.5), (x + w / 2, y + h * 0.5)], fill="#8fa4b0", width=max(2, int(w * 0.018)))
 
 
 # --------------------------------------------------------------------------- #
@@ -66,7 +104,7 @@ def _light_shaft(img: Image.Image, x: float, y: float, w: float, h: float, colou
     steps = 4
     for i in range(steps):
         t = i / steps
-        spread = 0.16 + 0.20 * t
+        spread = 0.10 + 0.16 * t
         a = int(alpha * (0.25 + 0.75 * (1 - t)) / steps)
         d.polygon([(x - w * spread * 0.5, y), (x + w * spread * 0.5, y),
                    (x + w * spread * 1.5, y + h), (x - w * spread * 1.5, y + h)],
@@ -244,6 +282,94 @@ def draw_background(img: Image.Image, kind: str, palette: Optional[List[str]] = 
         rounded_rect(d, [w * 0.10, horizon - h * 0.02, w * 0.40, horizon + h * 0.06], w * 0.01,
                      "#6a4a3a", "#2a1c14", w * 0.004)
 
+    elif kind == "cell":
+        img.paste(vertical_gradient((w, h), shade(top, 0.10), mid).convert("RGBA"), (0, 0))
+        d = ImageDraw.Draw(img, "RGBA")
+        _bricks(d, w, h, h * 0.16, h * 0.80, mid, shade(mid, -0.30))
+        _floor(d, w, h, h * 0.80, shade(mid, -0.22), lines=4, line_colour=shade(mid, -0.34))
+        _ceiling_light(img, w * 0.55, h * 0.02, w * 0.34, h * 0.10)
+        _window(img, w * 0.30, h * 0.30, w * 0.26, h * 0.16, bars=3)
+        _light_shaft(img, w * 0.30, h * 0.46, w * 0.22, h * 0.38, "#eaf6ff", 20)
+        # painted patch on the wall
+        patch = float(extra.get("paint", 0.0) or 0.0)
+        if patch > 0:
+            d.rectangle([w * 0.52, h * 0.30, w * 0.52 + w * 0.22 * patch, h * 0.72],
+                        fill=extra.get("paint_colour", "#e0218a"))
+        # paint tray on the floor
+        rounded_rect(d, [w * 0.18, h * 0.84, w * 0.40, h * 0.90], w * 0.01,
+                     "#c8ced4", "#5a6a72", max(2, w * 0.006))
+        d.rectangle([w * 0.20, h * 0.85, w * 0.38, h * 0.885], fill=extra.get("paint_colour", "#e0218a"))
+
+    elif kind == "paint_shop":
+        img.paste(vertical_gradient((w, h), top, shade(mid, 0.08)).convert("RGBA"), (0, 0))
+        d = ImageDraw.Draw(img, "RGBA")
+        _bricks(d, w, h, h * 0.10, h * 0.66, shade(low, 0.35), shade(low, 0.10), bw=0.10, bh=0.026)
+        _floor(d, w, h, h * 0.66, shade("#5a6b74", -0.05), lines=4, line_colour=shade("#5a6b74", -0.2))
+        # window with mullions
+        _window(img, w * 0.66, h * 0.20, w * 0.30, h * 0.22, bars=3)
+        # shelves with paint cans
+        for row in range(2):
+            sy = h * (0.26 + row * 0.12)
+            d.rectangle([w * 0.10, sy, w * 0.44, sy + h * 0.012], fill="#6a5238")
+            for i in range(5):
+                cx = w * (0.13 + i * 0.062)
+                colour = ["#d94f4f", "#4f8fd9", "#f2c14b", "#7fd1a0", "#b47fd1"][(i + row) % 5]
+                rounded_rect(d, [cx, sy - h * 0.035, cx + w * 0.038, sy], w * 0.006, colour, "#3a3038", max(1, w * 0.004))
+        # PAINT SHOP sign
+        rounded_rect(d, [w * 0.12, h * 0.19, w * 0.36, h * 0.235], w * 0.008, "#f4f1ea", "#3a3038", max(1, w * 0.005))
+        # work table
+        rounded_rect(d, [w * 0.05, h * 0.62, w * 0.95, h * 0.70], w * 0.012, "#b07a3c", "#4a3018", max(2, w * 0.008))
+        for lx in (0.14, 0.86):
+            d.rectangle([w * lx - w * 0.012, h * 0.70, w * lx + w * 0.012, h * 0.86], fill="#6a4a28")
+        # mixing mat + cans on the table
+        rounded_rect(d, [w * 0.24, h * 0.63, w * 0.76, h * 0.695], w * 0.006, "#4f8f6a", None, 0)
+        for i, colour in enumerate(["#e8e8e8", "#d94f4f"]):
+            cx = w * (0.34 + i * 0.20)
+            rounded_rect(d, [cx - w * 0.045, h * 0.56, cx + w * 0.045, h * 0.63], w * 0.01, "#c8ced4", "#5a6a72", max(1, w * 0.005))
+            ellipse(d, cx, h * 0.56, w * 0.045, h * 0.010, colour, "#5a6a72", max(1, w * 0.004))
+
+    elif kind == "corridor":
+        img.paste(vertical_gradient((w, h), shade(top, 0.08), mid).convert("RGBA"), (0, 0))
+        d = ImageDraw.Draw(img, "RGBA")
+        _bricks(d, w, h, h * 0.18, h * 0.78, mid, shade(mid, -0.28), bw=0.085, bh=0.028)
+        _floor(d, w, h, h * 0.78, shade("#8a9aa2", 0.10), lines=3, line_colour=shade("#8a9aa2", -0.10))
+        # yellow safety line
+        d.rectangle([0, h * 0.86, w, h * 0.895], fill="#e8c33a")
+        # cell doors
+        for i, dx in enumerate((0.18, 0.62)):
+            door_x = w * dx
+            inner = extra.get("pink_doors", True)
+            rounded_rect(d, [door_x, h * 0.30, door_x + w * 0.26, h * 0.80], w * 0.01,
+                         "#3d6b7a" if not inner else "#c8d4d8", "#1b2a30", max(2, w * 0.007))
+            # opening with the pink cell visible
+            d.rectangle([door_x + w * 0.03, h * 0.34, door_x + w * 0.23, h * 0.78],
+                        fill="#ef4f9a" if inner else "#22343c")
+            d.rectangle([door_x + w * 0.06, h * 0.40, door_x + w * 0.20, h * 0.52],
+                        fill="#d8e8f0" if inner else "#1b2a30")
+            # plate
+            rounded_rect(d, [door_x + w * 0.07, h * 0.26, door_x + w * 0.19, h * 0.295], w * 0.004,
+                         "#e8eef2", "#3a4a52", max(1, w * 0.004))
+        _ceiling_light(img, w * 0.50, h * 0.02, w * 0.30, h * 0.09)
+        _ceiling_light(img, w * 0.14, h * 0.06, w * 0.18, h * 0.07)
+
+    elif kind == "canteen":
+        img.paste(vertical_gradient((w, h), top, mid).convert("RGBA"), (0, 0))
+        d = ImageDraw.Draw(img, "RGBA")
+        _bricks(d, w, h, h * 0.20, h * 0.62, shade(mid, 0.10), shade(mid, -0.15), bw=0.09, bh=0.028)
+        _floor(d, w, h, h * 0.62, shade("#9aa8ae", 0.05), lines=4, line_colour=shade("#9aa8ae", -0.12))
+        # mezzanine railing + pod sign
+        for i in range(14):
+            d.line([(w * i / 13, h * 0.16), (w * i / 13, h * 0.24)], fill="#7a8f9a", width=max(1, int(w * 0.004)))
+        d.line([(0, h * 0.16), (w, h * 0.16)], fill="#7a8f9a", width=max(2, int(w * 0.008)))
+        rounded_rect(d, [w * 0.34, h * 0.10, w * 0.66, h * 0.145], w * 0.006, "#dfe8ee", "#3a4a52", max(1, w * 0.004))
+        # canteen tables
+        for i, ty in enumerate((0.66, 0.80)):
+            rounded_rect(d, [w * (0.04 + i * 0.02), h * ty, w * (0.96 - i * 0.02), h * (ty + 0.03)],
+                         w * 0.01, "#8fb8d8", "#3a5a6a", max(2, w * 0.006))
+            for lx in (0.12, 0.88):
+                d.rectangle([w * lx, h * (ty + 0.03), w * lx + w * 0.012, h * (ty + 0.12)], fill="#5a7a8a")
+        _ceiling_light(img, w * 0.5, h * 0.02, w * 0.36, h * 0.08)
+
     else:  # plain / wall
         img.paste(vertical_gradient((w, h), top, mid).convert("RGBA"), (0, 0))
         d = ImageDraw.Draw(img, "RGBA")
@@ -259,12 +385,6 @@ def draw_background(img: Image.Image, kind: str, palette: Optional[List[str]] = 
         g = radial_glow(int(w * 0.9), extra["glow"], 0.9)
         img.alpha_composite(g, (int(w * 0.05 + ox), int(h * 0.12 + oy)))
 
-    # subtle atmospheric haze at the horizon (cheap: banded alpha, no blur)
-    d = ImageDraw.Draw(img, "RGBA")
-    for i in range(6):
-        band = h * 0.012
-        y0 = horizon - h * 0.06 + i * band
-        d.rectangle([0, y0, w, y0 + band], fill=(255, 255, 255, 4 + i * 2))
 
 
 def load_image_background(path: str, size: Tuple[int, int], parallax: Tuple[float, float] = (0, 0)) -> Optional[Image.Image]:
