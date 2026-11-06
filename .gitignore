@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated media — never commit renders
+output/
+projects/*/segments/
+projects/*/frames/
+projects/*/audio/*.wav
+projects/*/state.json
+assets/sounds/*.wav
+!assets/sounds/.gitkeep
+
+# Keep the sample project inputs
+!projects/pink_paint/story.txt
+!projects/pink_paint/characters.json
+
+.DS_Store
