@@ -1,0 +1,385 @@
+{
+  "title": "A scientist discovers a pink paint that temporarily calms aggressive p",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "duration": 18.096,
+  "mood": "dark",
+  "style": {
+    "look": "stylized 2D vector"
+  },
+  "characters": [
+    {
+      "skin": "#e8b48a",
+      "hair": "#3a3038",
+      "hairStyle": "short",
+      "outfit": "#f4f1ea",
+      "outfitStyle": "coat",
+      "accent": "#3f6fa8",
+      "pants": "#3a4152",
+      "headgear": "none",
+      "accessory": "glasses",
+      "build": 0.95,
+      "id": "scientist",
+      "name": "Dr. Rao",
+      "role": "protagonist"
+    },
+    {
+      "skin": "#d8a078",
+      "hair": "#221c22",
+      "hairStyle": "short",
+      "outfit": "#2f3f5f",
+      "outfitStyle": "uniform",
+      "accent": "#1c2740",
+      "pants": "#232a3a",
+      "headgear": "cap",
+      "accessory": "none",
+      "build": 1.12,
+      "id": "guard",
+      "name": "Officer Mehta",
+      "role": "support"
+    },
+    {
+      "skin": "#c98a5e",
+      "hair": "#2a1c16",
+      "hairStyle": "balding",
+      "outfit": "#e0dcc8",
+      "outfitStyle": "striped",
+      "accent": "#d9822b",
+      "pants": "#6a6252",
+      "headgear": "none",
+      "accessory": "none",
+      "build": 1.0,
+      "id": "prisoner",
+      "name": "The Prisoner",
+      "role": "support"
+    },
+    {
+      "skin": "#b87a4e",
+      "hair": "#1a1414",
+      "hairStyle": "bald",
+      "outfit": "#c8c4b0",
+      "outfitStyle": "striped",
+      "accent": "#b5476f",
+      "pants": "#5a5448",
+      "headgear": "none",
+      "accessory": "none",
+      "build": 1.28,
+      "id": "inmate",
+      "name": "Big Inmate",
+      "role": "support"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s01",
+      "index": 0,
+      "start": 0.0,
+      "duration": 4.681,
+      "narration": "A scientist discovers a pink paint that temporarily calms aggressive prisoners.",
+      "background": {
+        "kind": "lab",
+        "palette": [
+          "#18202f",
+          "#33415c",
+          "#8fa6c8"
+        ],
+        "pink": 0.55
+      },
+      "camera": {
+        "move": "pull_out",
+        "zoom": 1.1,
+        "easing": "ease_in_out"
+      },
+      "characters": [
+        {
+          "id": "scientist",
+          "x": -1.0,
+          "depth": 0.9,
+          "facing": 1,
+          "action": "talk",
+          "expression": "happy",
+          "previous_action": "stand",
+          "talking": true
+        },
+        {
+          "id": "prisoner",
+          "x": 0.0,
+          "depth": 1.0,
+          "facing": 1,
+          "action": "stand",
+          "expression": "neutral",
+          "previous_action": "stand",
+          "talking": false
+        },
+        {
+          "id": "guard",
+          "x": 1.0,
+          "depth": 0.9,
+          "facing": -1,
+          "action": "stand",
+          "expression": "neutral",
+          "previous_action": "stand",
+          "talking": false
+        }
+      ],
+      "objects": [],
+      "sfx": [
+        {
+          "at": 0.15,
+          "name": "machine",
+          "gain": 0.25
+        }
+      ],
+      "transition": "fade",
+      "vignette": true
+    },
+    {
+      "id": "s02",
+      "index": 1,
+      "start": 4.681,
+      "duration": 2.758,
+      "narration": "He tests it inside a prison.",
+      "background": {
+        "kind": "prison_cell",
+        "palette": [
+          "#2a2f38",
+          "#4a525e",
+          "#8d99a8"
+        ],
+        "pink": 0.55
+      },
+      "camera": {
+        "move": "medium",
+        "zoom": 1.14,
+        "easing": "ease_in_out"
+      },
+      "characters": [
+        {
+          "id": "scientist",
+          "x": -0.62,
+          "depth": 1.0,
+          "facing": 1,
+          "action": "talk",
+          "expression": "neutral",
+          "previous_action": "talk",
+          "talking": true
+        },
+        {
+          "id": "prisoner",
+          "x": 0.62,
+          "depth": 1.0,
+          "facing": -1,
+          "action": "stand",
+          "expression": "neutral",
+          "previous_action": "talk",
+          "talking": false
+        }
+      ],
+      "objects": [],
+      "sfx": [
+        {
+          "at": 0.15,
+          "name": "machine",
+          "gain": 0.25
+        }
+      ],
+      "transition": "crossfade",
+      "vignette": true
+    },
+    {
+      "id": "s03",
+      "index": 2,
+      "start": 7.438,
+      "duration": 2.758,
+      "narration": "A guard paints the walls pink.",
+      "background": {
+        "kind": "wall",
+        "palette": [
+          "#333a44",
+          "#4a525e",
+          "#9aa4b0"
+        ],
+        "pink": 1.0
+      },
+      "camera": {
+        "move": "pan_right",
+        "zoom": 1.1,
+        "easing": "ease_in_out"
+      },
+      "characters": [
+        {
+          "id": "guard",
+          "x": -0.62,
+          "depth": 1.0,
+          "facing": 1,
+          "action": "point",
+          "expression": "neutral",
+          "previous_action": "talk",
+          "talking": true
+        },
+        {
+          "id": "scientist",
+          "x": 0.62,
+          "depth": 1.0,
+          "facing": -1,
+          "action": "point",
+          "expression": "neutral",
+          "previous_action": "talk",
+          "talking": false
+        }
+      ],
+      "objects": [],
+      "sfx": [
+        {
+          "at": 0.25,
+          "name": "whoosh",
+          "gain": 0.7
+        },
+        {
+          "at": 0.15,
+          "name": "machine",
+          "gain": 0.25
+        }
+      ],
+      "transition": "crossfade",
+      "vignette": true
+    },
+    {
+      "id": "s04",
+      "index": 3,
+      "start": 10.196,
+      "duration": 2.45,
+      "narration": "The prisoners gradually become calm.",
+      "background": {
+        "kind": "prison_cell",
+        "palette": [
+          "#2a2f38",
+          "#4a525e",
+          "#8d99a8"
+        ],
+        "pink": 1.0
+      },
+      "camera": {
+        "move": "low_angle",
+        "zoom": 1.08,
+        "easing": "ease_in_out"
+      },
+      "characters": [
+        {
+          "id": "prisoner",
+          "x": -1.0,
+          "depth": 0.9,
+          "facing": 1,
+          "action": "stand",
+          "expression": "happy",
+          "previous_action": "point",
+          "talking": true
+        },
+        {
+          "id": "scientist",
+          "x": 0.0,
+          "depth": 1.0,
+          "facing": 1,
+          "action": "stand",
+          "expression": "neutral",
+          "previous_action": "point",
+          "talking": false
+        },
+        {
+          "id": "guard",
+          "x": 1.0,
+          "depth": 0.9,
+          "facing": -1,
+          "action": "stand",
+          "expression": "neutral",
+          "previous_action": "point",
+          "talking": false
+        }
+      ],
+      "objects": [],
+      "sfx": [
+        {
+          "at": 0.15,
+          "name": "machine",
+          "gain": 0.25
+        }
+      ],
+      "transition": "crossfade",
+      "vignette": true
+    },
+    {
+      "id": "s05",
+      "index": 4,
+      "start": 12.646,
+      "duration": 5.45,
+      "narration": "However, after prolonged exposure, the effect reverses and the prisoners become aggressive again.",
+      "background": {
+        "kind": "prison_cell",
+        "palette": [
+          "#2a2f38",
+          "#4a525e",
+          "#8d99a8"
+        ],
+        "pink": 1.0
+      },
+      "camera": {
+        "move": "push_in",
+        "zoom": 1.06,
+        "easing": "ease_in_out"
+      },
+      "characters": [
+        {
+          "id": "prisoner",
+          "x": -1.0,
+          "depth": 0.9,
+          "facing": 1,
+          "action": "fight",
+          "expression": "angry",
+          "previous_action": "stand",
+          "talking": true
+        },
+        {
+          "id": "scientist",
+          "x": 0.0,
+          "depth": 1.0,
+          "facing": 1,
+          "action": "fight",
+          "expression": "neutral",
+          "previous_action": "stand",
+          "talking": false
+        },
+        {
+          "id": "inmate",
+          "x": 1.0,
+          "depth": 0.9,
+          "facing": -1,
+          "action": "fight",
+          "expression": "neutral",
+          "previous_action": "stand",
+          "talking": false
+        }
+      ],
+      "objects": [],
+      "sfx": [
+        {
+          "at": 0.25,
+          "name": "punch",
+          "gain": 0.7
+        },
+        {
+          "at": 0.25,
+          "name": "impact",
+          "gain": 0.7
+        },
+        {
+          "at": 0.15,
+          "name": "machine",
+          "gain": 0.25
+        }
+      ],
+      "transition": "iris",
+      "vignette": true
+    }
+  ]
+}
