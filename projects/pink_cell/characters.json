@@ -1,0 +1,13 @@
+{
+  "characters": [
+    {"id": "scientist", "name": "The Scientist", "role": "protagonist", "bodyStyle": "stick",
+     "skin": "#f2ece2", "hair": "#6b4a2f", "hairStyle": "short", "outfit": "#f4f1ea",
+     "accent": "#8a5a2b", "tie": true, "head_scale": 1.62, "limb": 0.019, "torso": 0.062},
+    {"id": "guard", "name": "The Guard", "role": "support", "bodyStyle": "stick",
+     "skin": "#f2ece2", "hair": "#2a2a33", "hairStyle": "cap", "outfit": "#22304f",
+     "accent": "#22304f", "tie": false, "badge": true, "head_scale": 1.58, "limb": 0.019, "torso": 0.064},
+    {"id": "prisoner", "name": "The Prisoner", "role": "support", "bodyStyle": "stick",
+     "skin": "#f2ece2", "hair": "#c86a3a", "hairStyle": "short", "outfit": "#9aa8b4",
+     "accent": "#7a8794", "tie": false, "head_scale": 1.55, "limb": 0.018, "torso": 0.060}
+  ]
+}
