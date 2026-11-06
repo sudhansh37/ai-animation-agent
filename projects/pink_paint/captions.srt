@@ -1,0 +1,24 @@
+1
+00:00:00,000 --> 00:00:07,261
+A scientist discovers a pink paint that temporarily calms aggressive prisoners.
+
+2
+00:00:07,261 --> 00:00:10,522
+He tests it inside a prison.
+
+3
+00:00:10,522 --> 00:00:13,863
+A guard paints the walls pink.
+
+4
+00:00:13,863 --> 00:00:16,313
+The prisoners gradually become calm.
+
+5
+00:00:16,313 --> 00:00:19,038
+However, after prolonged exposure, the effect reverses and the prisoners become
+
+6
+00:00:19,038 --> 00:00:21,763
+aggressive again.
+
