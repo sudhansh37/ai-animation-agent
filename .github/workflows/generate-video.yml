@@ -1,0 +1,215 @@
+name: 1 · Generate video
+
+# Story in, vertical MP4 out — entirely on a CPU runner. No GPU, no CUDA.
+# Nothing is committed back to the repo: the video comes back as a downloadable
+# release asset plus a workflow artifact.
+
+on:
+  workflow_dispatch:
+    inputs:
+      story:
+        description: "Story / script / topic (leave empty to use the project's story.txt)"
+        type: string
+        required: false
+        default: ""
+      project:
+        description: "Project folder name"
+        type: string
+        required: false
+        default: "pink_paint"
+      voice:
+        description: "Voice (Gemini TTS voice, or espeak language)"
+        type: choice
+        required: false
+        default: "Kore"
+        options: ["Kore", "Puck", "Charon", "Fenrir", "Aoede", "Leda", "Orus", "Zephyr", "en"]
+      preview:
+        description: "Fast half-resolution preview"
+        type: boolean
+        required: false
+        default: false
+      no_ai:
+        description: "Rule-based only (no Gemini calls)"
+        type: boolean
+        required: false
+        default: false
+      publish_release:
+        description: "Publish the MP4 as a release asset (direct download link)"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: video-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    name: Render the short
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      STORY_INPUT: ${{ inputs.story }}
+      PROJECT: ${{ inputs.project }}
+      VOICE: ${{ inputs.voice }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      TTS_MODEL: ${{ vars.TTS_MODEL }}
+      OMP_NUM_THREADS: 2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Ensure ffmpeg
+        timeout-minutes: 6
+        run: |
+          set -u
+          if command -v ffmpeg >/dev/null 2>&1; then
+            ffmpeg -version 2>/dev/null | sed -n '1p'
+            exit 0
+          fi
+          echo "ffmpeg missing — trying apt"
+          sudo apt-get update -qq -o Acquire::Retries=1 || true
+          sudo apt-get install -y -qq ffmpeg || true
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            echo "falling back to a static build"
+            curl -sL --retry 3 -o /tmp/ff.tar.xz \
+              https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+            mkdir -p /tmp/ff && tar -xf /tmp/ff.tar.xz -C /tmp/ff --strip-components=1
+            sudo cp /tmp/ff/ffmpeg /tmp/ff/ffprobe /usr/local/bin/
+            sudo chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
+          fi
+          command -v ffmpeg >/dev/null 2>&1 || { echo "::error::ffmpeg could not be installed"; exit 1; }
+          ffmpeg -version 2>/dev/null | sed -n '1p'
+
+      - name: Optional offline TTS (espeak-ng fallback)
+        continue-on-error: true
+        run: sudo apt-get install -y -qq espeak-ng || true
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet --disable-pip-version-check -r requirements.txt
+
+      - name: Prepare project folder
+        run: |
+          mkdir -p "projects/$PROJECT" output
+          if [ -n "$STORY_INPUT" ]; then
+            printf '%s\n' "$STORY_INPUT" > "projects/$PROJECT/story.txt"
+            echo "Using the story supplied in the workflow inputs."
+          else
+            echo "Using the committed story:"; cat "projects/$PROJECT/story.txt"
+          fi
+
+      - name: Tests
+        continue-on-error: true
+        run: python -m tests.test_pipeline
+
+      - name: Generate the video
+        run: |
+          set -o pipefail
+          ARGS="--project projects/$PROJECT --out output/${PROJECT}.mp4 --voice $VOICE"
+          if [ "${{ inputs.preview }}" = "true" ]; then ARGS="$ARGS --preview"; fi
+          if [ "${{ inputs.no_ai }}" = "true" ]; then ARGS="$ARGS --no-ai"; fi
+          python -m app.main $ARGS 2>&1 | tee work.log
+
+      - name: Verify the output
+        run: |
+          python - <<'PY'
+          import json, sys
+          sys.path.insert(0, ".")
+          from render_engine.video_exporter import probe
+          import glob
+          files = sorted(glob.glob("output/*.mp4"), key=lambda p: -len(p))
+          info = probe(files[0])
+          print(json.dumps(info, indent=2))
+          if info["problems"]:
+              for problem in info["problems"]:
+                  print(f"::warning::{problem}")
+          else:
+              print("::notice::output verified 1080x1920 @ 30fps h264+aac")
+          PY
+
+      - name: Publish download link
+        id: publish
+        if: ${{ inputs.publish_release && hashFiles('output/*.mp4') != '' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          FILE=$(ls -S output/*.mp4 | head -n1)
+          NAME=$(basename "$FILE")
+          TAG="video-$(date -u +%Y%m%d-%H%M%S)"
+          gh release create "$TAG" "$FILE" \
+            --title "Animated short — $(date -u +'%d %b %Y %H:%M UTC')" \
+            --notes "Auto-generated by workflow run #${{ github.run_number }}. Asset: $NAME (1080x1920, 30fps, H.264 + AAC)." \
+            --latest
+          URL="https://github.com/${{ github.repository }}/releases/download/$TAG/$NAME"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Video ready::Download: $URL"
+
+      - name: Summary
+        if: always()
+        env:
+          DOWNLOAD_URL: ${{ steps.publish.outputs.url }}
+        run: |
+          {
+            echo "## Animated short — build report"
+            echo ""
+            if [ -f "projects/$PROJECT/storyboard.json" ]; then
+              python - <<'PY'
+          import json, os
+          p = "projects/%s/storyboard.json" % os.environ.get("PROJECT", "pink_paint")
+          if os.path.exists(p):
+              b = json.load(open(p))
+              print(f"| item | value |")
+              print("|---|---|")
+              print(f"| title | {b.get('title')} |")
+              print(f"| duration | {b.get('duration', 0):.1f}s |")
+              print(f"| scenes | {len(b.get('scenes', []))} |")
+              print(f"| characters | {', '.join(c['id'] for c in b.get('characters', []))} |")
+              print("")
+          PY
+            fi
+            if [ -f render_report.json ] || ls output/*.mp4 >/dev/null 2>&1; then
+              echo "### Output"
+              ls -lh output/*.mp4 || true
+            fi
+            if [ -n "${DOWNLOAD_URL:-}" ]; then
+              echo ""
+              echo "## ⬇️ [Download the video]($DOWNLOAD_URL)"
+              echo ""
+              echo "Always-newest link: https://github.com/${{ github.repository }}/releases/latest"
+            fi
+            echo ""
+            echo "Artifacts on this run: **animated-short** (MP4 + storyboard + captions + report)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: animated-short
+          path: |
+            output/*.mp4
+            projects/*/storyboard.json
+            projects/*/captions.srt
+            projects/*/analysis.json
+            projects/*/script.json
+            projects/*/characters.json
+            projects/*/render_report.json
+            projects/*/audio/audio_report.json
+            work.log
+          if-no-files-found: warn
+          retention-days: 14
