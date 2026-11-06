@@ -1,0 +1,16 @@
+{
+  "characters": [
+    {"id": "scientist", "name": "Dr. Rao", "role": "protagonist", "skin": "#e8b48a", "hair": "#3a3038",
+     "hairStyle": "short", "outfit": "#f4f1ea", "outfitStyle": "coat", "accent": "#3f6fa8",
+     "pants": "#3a4152", "headgear": "none", "accessory": "glasses", "build": 0.95},
+    {"id": "guard", "name": "Officer Mehta", "role": "support", "skin": "#d8a078", "hair": "#221c22",
+     "hairStyle": "short", "outfit": "#2f3f5f", "outfitStyle": "uniform", "accent": "#1c2740",
+     "pants": "#232a3a", "headgear": "cap", "accessory": "none", "build": 1.12},
+    {"id": "prisoner", "name": "The Prisoner", "role": "support", "skin": "#c98a5e", "hair": "#2a1c16",
+     "hairStyle": "balding", "outfit": "#e0dcc8", "outfitStyle": "striped", "accent": "#d9822b",
+     "pants": "#6a6252", "headgear": "none", "accessory": "none", "build": 1.0},
+    {"id": "inmate", "name": "Big Inmate", "role": "support", "skin": "#b87a4e", "hair": "#1a1414",
+     "hairStyle": "bald", "outfit": "#c8c4b0", "outfitStyle": "striped", "accent": "#b5476f",
+     "pants": "#5a5448", "headgear": "none", "accessory": "none", "build": 1.28}
+  ]
+}
